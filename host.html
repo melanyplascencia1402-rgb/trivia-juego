@@ -5,6 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Moderador - Trivia</title>
 <link rel="stylesheet" href="style.css">
+<style>
+  /* Estilos exclusivos para la pantalla de ganador */
+  #end {
+    background-image: url('https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=1000&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    padding: 40px 20px;
+    border-radius: 20px;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8); /* Sombra para que el texto se lea bien */
+    box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, 0.5); /* Oscurece un poco la imagen para resaltar el texto */
+  }
+  #end h1 { color: white; font-size: 2.5rem; margin-bottom: 10px; }
+  #winnerMessage { font-size: 1.8rem; font-weight: bold; color: #ffd700; margin-bottom: 20px; }
+  /* Hacemos que los puntajes resalten sobre el fondo */
+  #finalRanking .player-row {
+    background: rgba(255, 255, 255, 0.9);
+    color: #333;
+    text-shadow: none;
+  }
+</style>
 </head>
 <body>
 <div class="card wide">
@@ -29,8 +50,10 @@
     <button id="nextBtn" onclick="next()" style="display:none;">Siguiente</button>
   </div>
 
+  <!-- Pantalla final modificada -->
   <div id="end" style="display:none;">
     <h1>Fin del juego</h1>
+    <div id="winnerMessage"></div>
     <div id="finalRanking" class="players"></div>
     <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
       <button onclick="location.href='/'">Volver al inicio</button>
@@ -100,6 +123,15 @@ socket.on('gameOver', ({ players }) => {
   document.getElementById('end').style.display = 'block';
   
   const top3 = players.slice(0, 3);
+  const winner = players[0];
+
+  // Mensaje de felicitación dinámico
+  if (winner) {
+    document.getElementById('winnerMessage').textContent = `¡Felicidades a: ${winner.name}!`;
+  } else {
+    document.getElementById('winnerMessage').textContent = `¡Fin del juego!`;
+  }
+
   document.getElementById('finalRanking').innerHTML = top3.map((p, i) =>
     `<div class="player-row ${i === 0 ? 'winner' : ''}">
       #${i + 1} ${p.name} - ${p.score} pts
