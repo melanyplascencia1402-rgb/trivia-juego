@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moderador - Trivia</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="card wide">
+  <div id="lobby">
+    <h1>🧑‍🏫 Panel del Moderador</h1>
+    <p>Código de sala: <strong id="roomCode">...</strong></p>
+    <img id="qr" alt="QR" style="width:220px; margin:15px auto; display:block;">
+    <p class="sub">Los jugadores escanean el QR o entran con el código.</p>
+    <h3>Jugadores (<span id="playerCount">0</span>)</h3>
+    <div id="playerList" class="players"></div>
+    <button id="startBtn" onclick="start()" disabled>▶ Iniciar partida</button>
+  </div>
+
+  <div id="game" style="display:none;">
+    <div class="progress"><div id="bar" class="progress-bar"></div></div>
+    <p id="qCounter" class="sub"></p>
+    <h2 id="questionText"></h2>
+    <div id="answers" class="answers"></div>
+    <p class="timer">⏱ <span id="timer">15</span>s</p>
+    <div id="ranking" class="players"></div>
+    <button id="nextBtn" onclick="next()" style="display:none;">Siguiente →</button>
+  </div>
+
+  <div id="end" style="display:none;">
+    <h1>🏁 Fin del juego</h1>
+    <div id="finalRanking" class="players"></div>
+    <button onclick="location.reload()">Jugar de nuevo</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+let timerInterval;
+
+socket.on('connect', () => socket.emit('createRoom'));
+
+socket.on('roomCreated', ({ code, qr }) => {
+  document.getElementById('roomCode').textContent = code;
+  document.getElementById('qr').src = qr;
+});
+
+socket.on('updatePlayers', (players) => {
+  document.getElementById('playerCount').textContent = players.length;
+  document.getElementById('playerList').innerHTML =
+    players.map(p => `<div class="player-row">👤 ${p.name}</div>`).join('');
+  document.getElementById('startBtn').disabled = players.length === 0;
+});
+
+socket.on('newQuestion', (data) => {
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  document.getElementById('nextBtn').style.display = 'none';
+
+  document.getElementById('qCounter').textContent = `Pregunta ${data.index + 1} de ${data.total}`;
+  document.getElementById('questionText').textContent = data.question;
+  document.getElementById('bar').style.width = `${(data.index / data.total) * 100}%`;
+
+  document.getElementById('answers').innerHTML =
+    data.answers.map((a, i) => `<div class="answer-static">${a}</div>`).join('');
+
+  let t = data.time;
+  document.getElementById('timer').textContent = t;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    t--;
+    document.getElementById('timer').textContent = Math.max(0, t);
+    if (t <= 0) clearInterval(timerInterval);
+  }, 1000);
+});
+
+socket.on('revealAnswer', ({ correct, players }) => {
+  const answersEl = document.getElementById('answers');
+  answersEl.querySelectorAll('.answer-static').forEach((el, i) => {
+    if (i === correct) el.classList.add('correct');
+  });
+  renderRanking(players);
+  document.getElementById('nextBtn').style.display = 'inline-block';
+});
+
+socket.on('gameOver', ({ players }) => {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('end').style.display = 'block';
+  document.getElementById('finalRanking').innerHTML = players.map((p, i) =>
+    `<div class="player-row ${i === 0 ? 'winner' : ''}">
+      ${i === 0 ? '🏆' : '#' + (i + 1)} ${p.name} — ${p.score} pts
+    </div>`).join('');
+});
+
+socket.on('hostLeft', () => alert('El moderador cerró la sala'));
+
+function start() { socket.emit('startGame'); }
+function next() { socket.emit('nextQuestion'); }
+
+function renderRanking(players) {
+  document.getElementById('ranking').innerHTML = players.slice(0, 5).map((p, i) =>
+    `<div class="player-row ${i === 0 ? 'winner' : ''}">
+      ${i === 0 ? '🏆' : '#' + (i + 1)} ${p.name} — ${p.score} pts
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trivia - Inicio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="card">
+  <h1>🎮 Trivia Multijugador</h1>
+  <p class="sub">Elige cómo entrar</p>
+
+  <div class="split">
+    <div class="box">
+      <h2>🧑‍🏫 Moderador</h2>
+      <p>Crea una sala y controla el juego.</p>
+      <button onclick="location.href='/host.html'">Crear Sala</button>
+    </div>
+    <div class="box">
+      <h2>🙋 Jugador</h2>
+      <p>Únete con un código de sala.</p>
+      <input id="code" placeholder="Código de sala" maxlength="4">
+      <input id="name" placeholder="Tu apodo">
+      <button onclick="join()">Unirse</button>
+    </div>
+  </div>
+</div>
+<script>
+function join() {
+  const code = document.getElementById('code').value.trim().toUpperCase();
+  const name = document.getElementById('name').value.trim();
+  if (!code || !name) return alert('Pon código y apodo');
+  location.href = `/player.html?room=${code}&name=${encodeURIComponent(name)}`;
+}
+</script>
+</body>
+</html>
