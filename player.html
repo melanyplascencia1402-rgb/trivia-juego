@@ -8,24 +8,38 @@
 </head>
 <body>
 <div class="card">
-  <div id="waiting">
-    <h1>🙋 <span id="pname">...</span></h1>
-    <p class="sub">Esperando que el moderador inicie...</p>
-    <div id="status" class="status">🟢 Conectado</div>
+  
+  <!-- Nueva pantalla para pedir el apodo -->
+  <div id="login">
+    <h1>Unirse a la sala</h1>
+    <p class="sub">Sala: <strong id="displayRoom"></strong></p>
+    <input id="nameInput" placeholder="Escribe tu apodo" maxlength="15">
+    <button onclick="entrar()">Entrar a jugar</button>
+    <p id="errorMsg" class="status" style="color: red;"></p>
   </div>
 
+  <!-- Pantalla de espera -->
+  <div id="waiting" style="display:none;">
+    <h1><span id="pname">...</span></h1>
+    <p class="sub">Esperando que el moderador inicie...</p>
+    <div id="status" class="status">Conectado</div>
+  </div>
+
+  <!-- Pantalla de juego -->
   <div id="play" style="display:none;">
     <p id="qCounter" class="sub"></p>
     <h2 id="questionText"></h2>
     <div id="answers" class="answers"></div>
-    <p class="timer">⏱ <span id="timer">15</span>s</p>
+    <p class="timer">Tiempo: <span id="timer">15</span>s</p>
     <p id="result" class="status"></p>
   </div>
 
+  <!-- Pantalla final -->
   <div id="finished" style="display:none;">
-    <h1>🏁 Fin</h1>
+    <h1>Fin del juego</h1>
     <p id="myScore" class="sub"></p>
     <div id="finalRanking" class="players"></div>
+    <button onclick="location.href='/'">Volver al inicio</button>
   </div>
 </div>
 
@@ -34,23 +48,45 @@
 const socket = io();
 const params = new URLSearchParams(location.search);
 const room = params.get('room');
-const name = params.get('name') || 'Jugador';
+let name = "";
 
-document.getElementById('pname').textContent = name;
+// Si el QR trae el nombre en la URL (por si acaso), lo usamos
+if (params.get('name')) {
+  name = params.get('name');
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('waiting').style.display = 'block';
+  document.getElementById('pname').textContent = name;
+  document.getElementById('status').textContent = "Conectado";
+  socket.emit('joinRoom', { code: room, name });
+} else {
+  // Si no trae nombre, mostramos el login
+  document.getElementById('displayRoom').textContent = room;
+}
+
+function entrar() {
+  const inputName = document.getElementById('nameInput').value.trim();
+  if (!inputName) {
+    document.getElementById('errorMsg').textContent = "Por favor, escribe un apodo.";
+    return;
+  }
+  name = inputName;
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('waiting').style.display = 'block';
+  document.getElementById('pname').textContent = name;
+  socket.emit('joinRoom', { code: room, name });
+}
 
 let currentAnswered = false;
 let timerInterval;
 
-socket.on('connect', () => {
-  socket.emit('joinRoom', { code: room, name });
-});
-
 socket.on('joinError', (msg) => {
-  document.getElementById('status').textContent = '❌ ' + msg;
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('login').style.display = 'block';
+  document.getElementById('waiting').style.display = 'none';
 });
 
 socket.on('joined', () => {
-  document.getElementById('status').textContent = '✅ Dentro de la sala';
+  document.getElementById('status').textContent = 'Dentro de la sala';
 });
 
 socket.on('newQuestion', (data) => {
@@ -98,7 +134,7 @@ socket.on('revealAnswer', ({ correct, players }) => {
   const me = players.find(p => p.name === name);
   const myPos = players.findIndex(p => p.name === name) + 1;
   document.getElementById('result').textContent =
-    me ? `Puntaje: ${me.score} pts — Puesto #${myPos}` : '';
+    me ? `Puntaje: ${me.score} pts - Puesto #${myPos}` : '';
 });
 
 socket.on('gameOver', ({ players }) => {
@@ -109,16 +145,17 @@ socket.on('gameOver', ({ players }) => {
   const me = players.find(p => p.name === name);
   const pos = players.findIndex(p => p.name === name) + 1;
   document.getElementById('myScore').textContent =
-    me ? `Quedaste #${pos} con ${me.score} pts` : '';
+    me ? `Quedaste en el puesto #${pos} con ${me.score} pts` : '';
 
-  document.getElementById('finalRanking').innerHTML = players.map((p, i) =>
+  const top3 = players.slice(0, 3);
+  document.getElementById('finalRanking').innerHTML = top3.map((p, i) =>
     `<div class="player-row ${i === 0 ? 'winner' : ''}">
-      ${i === 0 ? '🏆' : '#' + (i + 1)} ${p.name} — ${p.score} pts
+      #${i + 1} ${p.name} - ${p.score} pts
     </div>`).join('');
 });
 
 socket.on('hostLeft', () => {
-  document.getElementById('status').textContent = '❌ El moderador cerró la sala';
+  document.getElementById('status').textContent = 'El moderador cerró la sala';
 });
 </script>
 </body>
