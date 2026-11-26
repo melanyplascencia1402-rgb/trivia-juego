@@ -37,7 +37,7 @@ const QUESTIONS = [
   { q: "¿Para qué se utilizó Render en el proyecto?", a: ["Para editar el tablero de actividades", "Para editar los archivos HTML", "Para probar la página en localhost", "Para desplegar la página y permitir que otras personas accedan mediante un enlace"], correct: 3 }
 ];
 
-const QUESTION_TIME = 15; // segundos por pregunta
+const QUESTION_TIME = 10; // segundos por pregunta
 
 // Salas en memoria
 const rooms = {}; // codigo -> { hostId, players:{id:{name,score}}, state, currentQ, timer, answers:{} }
