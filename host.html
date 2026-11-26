@@ -6,25 +6,48 @@
 <title>Moderador - Trivia</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  /* Estilos exclusivos para la pantalla de ganador */
+  /* Fondo editable para la pantalla final */
   #end {
-    background-image: url('https://images.unsplash.com/photo-1513151233558-d860c5398176?q=80&w=1000&auto=format&fit=crop');
+    background-image: var(--fondo-final);
     background-size: cover;
     background-position: center;
     padding: 40px 20px;
     border-radius: 20px;
     color: white;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8); /* Sombra para que el texto se lea bien */
-    box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, 0.5); /* Oscurece un poco la imagen para resaltar el texto */
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, 0.5); /* Oscurece la imagen */
   }
   #end h1 { color: white; font-size: 2.5rem; margin-bottom: 10px; }
   #winnerMessage { font-size: 1.8rem; font-weight: bold; color: #ffd700; margin-bottom: 20px; }
-  /* Hacemos que los puntajes resalten sobre el fondo */
-  #finalRanking .player-row {
-    background: rgba(255, 255, 255, 0.9);
-    color: #333;
-    text-shadow: none;
+  #finalRanking .player-row { background: rgba(255, 255, 255, 0.9); color: #333; text-shadow: none; }
+
+  /* Estilos para el Top 3 durante el juego */
+  .top3-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 15px;
+    margin: 20px 0;
+    height: 150px;
   }
+  .podium-box {
+    background: #f5f6fa;
+    border-radius: 10px 10px 0 0;
+    width: 100px;
+    text-align: center;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border: 2px solid #ddd;
+    border-bottom: none;
+  }
+  .podium-1 { height: 130px; background: #fff3cd; border-color: #ffc107; }
+  .podium-2 { height: 100px; background: #e2e3e5; border-color: #c0c0c0; }
+  .podium-3 { height: 80px; background: #f8d7da; border-color: #cd7f32; }
+  .podium-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; word-break: break-word; }
+  .podium-score { font-size: 0.8rem; color: #555; }
+  .podium-pos { font-size: 1.5rem; font-weight: bold; margin-top: 5px; color: #333; }
 </style>
 </head>
 <body>
@@ -44,13 +67,14 @@
     <p id="qCounter" class="sub"></p>
     <h2 id="questionText"></h2>
     <div id="answers" class="answers"></div>
-    <p class="timer">Tiempo: <span id="timer">15</span>s</p>
+    <p class="timer">Tiempo: <span id="timer">10</span>s</p>
+    
     <h3>Mejores Puntajes</h3>
-    <div id="ranking" class="players"></div>
+    <div id="top3Ranking" class="top3-container"></div>
+    
     <button id="nextBtn" onclick="next()" style="display:none;">Siguiente</button>
   </div>
 
-  <!-- Pantalla final modificada -->
   <div id="end" style="display:none;">
     <h1>Fin del juego</h1>
     <div id="winnerMessage"></div>
@@ -64,6 +88,14 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// ==========================================
+// EDITA AQUÍ LA URL DE TU IMAGEN DE FONDO
+// ==========================================
+const FONDO_URL = 'https://i.pinimg.com/236x/52/64/ad/5264adb5ff2c48ecba1b290a09ff209e.jpg';
+
+// Aplicar la imagen de fondo a la pantalla final mediante CSS
+document.documentElement.style.setProperty('--fondo-final', `url('${FONDO_URL}')`);
+
 const socket = io();
 let timerInterval;
 
@@ -93,6 +125,9 @@ socket.on('newQuestion', (data) => {
   document.getElementById('answers').innerHTML =
     data.answers.map((a, i) => `<div class="answer-static">${a}</div>`).join('');
 
+  // Limpiamos el top 3 al iniciar una nueva pregunta
+  document.getElementById('top3Ranking').innerHTML = '';
+
   let t = data.time;
   document.getElementById('timer').textContent = t;
   clearInterval(timerInterval);
@@ -109,11 +144,27 @@ socket.on('revealAnswer', ({ correct, players }) => {
     if (i === correct) el.classList.add('correct');
   });
   
+  // Renderizar el podio (Top 3)
   const top3 = players.slice(0, 3);
-  document.getElementById('ranking').innerHTML = top3.map((p, i) =>
-    `<div class="player-row ${i === 0 ? 'winner' : ''}">
-      #${i + 1} ${p.name} - ${p.score} pts
-    </div>`).join('');
+  const podiumEl = document.getElementById('top3Ranking');
+  podiumEl.innerHTML = '';
+  
+  // El orden para el podio visual (2do, 1ro, 3ro)
+  const order = [1, 0, 2]; 
+  
+  order.forEach(index => {
+    if (top3[index]) {
+      const p = top3[index];
+      const pos = index + 1;
+      podiumEl.innerHTML += `
+        <div class="podium-box podium-${pos}">
+          <div class="podium-name">${p.name}</div>
+          <div class="podium-score">${p.score} pts</div>
+          <div class="podium-pos">#${pos}</div>
+        </div>
+      `;
+    }
+  });
     
   document.getElementById('nextBtn').style.display = 'inline-block';
 });
@@ -125,7 +176,6 @@ socket.on('gameOver', ({ players }) => {
   const top3 = players.slice(0, 3);
   const winner = players[0];
 
-  // Mensaje de felicitación dinámico
   if (winner) {
     document.getElementById('winnerMessage').textContent = `¡Felicidades a: ${winner.name}!`;
   } else {
