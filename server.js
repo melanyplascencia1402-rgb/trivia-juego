@@ -9,7 +9,22 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, 'public')));
+// RUTAS DE LA PÁGINA PRINCIPAL
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/host.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'host.html'));
+});
+
+app.get('/player.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'player.html'));
+});
+
+app.get('/style.css', (req, res) => {
+    res.sendFile(path.join(__dirname, 'style.css'));
+});
 
 // ========== PREGUNTAS FIJAS (edita aquí) ==========
 const QUESTIONS = [
